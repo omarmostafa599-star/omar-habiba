@@ -1,0 +1,41 @@
+# عند أي تعديل على الفرع main (مثل تعديل invite.config.json من موقع GitHub نفسه):
+# يُعاد بناء الدعوة وتُنشر تلقائيًا على نفس الروابط عبر الفرع gh-pages.
+name: بناء ونشر الدعوة
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: بناء النسختين وملف التقويم
+        run: |
+          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          REPO="${GITHUB_REPOSITORY#*/}"
+          SITE_URL="https://${OWNER}.github.io/${REPO}/" node build.mjs
+
+      - name: النشر إلى الفرع gh-pages
+        run: |
+          cd _site
+          git init -q -b gh-pages
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "نشر: ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
