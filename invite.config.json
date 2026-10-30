@@ -1,7 +1,7 @@
 {
   "siteUrl": "https://omarmostafa599-star.github.io/omar-habiba/",
   "backend": {
-    "endpoint": "",
+    "endpoint": "https://script.google.com/macros/s/AKfycbw6GUNqaHavDqoWGvOmAOWHUF2RmimxX9dyR_7RuGnIL_A34MukpZD5AmjN1ht7SNovVQ/exec",
     "voiceMaxSeconds": 120,
     "videoMaxSeconds": 60,
     "videoMaxMB": 12

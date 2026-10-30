@@ -64,7 +64,7 @@ function buildSummary_(ss) {
     var c = conds.map(function (p) { return rng(sheet, p[0]) + '="' + p[1] + '"'; });
     c.push(rng(sheet, testCol) + '<>"نعم"');
     if (v) c.push(rng(sheet, 'B') + '="' + v + '"');
-    return '=IFERROR(COUNTUNIQUE(FILTER(' + rng(sheet, valCol) + ',' + c.join(',') + ')),0)';
+    return '=IFERROR(ROWS(UNIQUE(FILTER(' + rng(sheet, valCol) + ',' + c.join(',') + '))),0)';
   }
   var defs = [
     ['زيارات الصفحة', function (v) { return cnt(E, [['C', 'زيارة']], 'E', v); }],
@@ -75,7 +75,7 @@ function buildSummary_(ss) {
     ['سيحضرون (بدون تكرار الأسماء)', function (v) {
       var c = [rng(R, 'D') + '="سيحضر"', rng(R, 'F') + '<>"نعم"'];
       if (v) c.push(rng(R, 'B') + '="' + v + '"');
-      return '=IFERROR(COUNTUNIQUE(FILTER(TRIM(' + rng(R, 'C') + '),' + c.join(',') + ')),0)';
+      return '=IFERROR(ROWS(UNIQUE(FILTER(TRIM(' + rng(R, 'C') + '),' + c.join(',') + '))),0)';
     }],
     ['اعتذروا', function (v) { return cnt(R, [['D', 'اعتذر']], 'F', v); }],
     ['المباركات', function (v) { return cnt(W, [['C', '?*']], 'K', v); }],
@@ -141,10 +141,8 @@ function saveMedia_(m, kind, name, verLabel) {
   return { url: file.getUrl(), secs: secs, bytes: bytes.length };
 }
 function append_(def, row) {
-  var lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try { book_(false).getSheetByName(def.name).appendRow(row); }
-  finally { lock.releaseLock(); }
+  // appendRow عملية ذرّية في Google Sheets، فلا حاجة لقفل (القفل كان يسبب انتظارًا طويلًا)
+  book_(false).getSheetByName(def.name).appendRow(row);
 }
 
 // ---------- الاستقبال ----------
