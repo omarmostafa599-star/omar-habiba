@@ -309,7 +309,15 @@
       setState('busy'); lockOthers(true);
       navigator.mediaDevices.getUserMedia(o.constraints).then(function (s) {
         stream = s; chunks = []; bytes = 0;
-        if (o.live) { o.live.srcObject = s; o.live.play().catch(noop); }
+        // يجب أن يكون إطار المعاينة ظاهرًا قبل ربط الكاميرا، وإلا تبقى المعاينة سوداء على iPhone
+        setState('recording');
+        if (o.live) {
+          o.live.muted = true; o.live.playsInline = true;
+          o.live.setAttribute('muted', ''); o.live.setAttribute('playsinline', '');
+          o.live.srcObject = s;
+          var pl = function () { var r = o.live.play(); if (r && r.catch) r.catch(noop); };
+          pl(); requestAnimationFrame(pl);
+        }
         var mime = pickMime(), opts = { audioBitsPerSecond: 64000 };
         if (o.kind === 'video') opts.videoBitsPerSecond = 700000;
         if (mime) opts.mimeType = mime;
@@ -330,12 +338,13 @@
           if (o.onRecording) o.onRecording(false);
           if (blob.size > 0 && (!o.maxBytes || blob.size <= o.maxBytes)) {
             clip = { blob: blob, secs: secs, type: bt.type, ext: bt.ext, url: URL.createObjectURL(blob) };
-            o.player.src = clip.url;
+            // ‎#t يجعل iPhone يعرض أول لقطة من الفيديو بدل مربع أسود
+            o.player.src = clip.url + (o.kind === 'video' ? '#t=0.001' : '');
             o.lenEl.textContent = fmtTime(secs);
             setState('ready');
             if (o.onChange) o.onChange(true);
             if (hitLimit && o.limitText) o.note.textContent = o.limitText;
-          } else { setState('idle'); o.note.textContent = blob.size > 0 && o.limitText ? o.limitText : o.noAccess; }
+          } else { setState('idle'); o.note.textContent = blob.size > 0 && o.limitText ? o.limitText : (T.recEmpty || o.noAccess) + ' (empty)'; }
           var w = waiters; waiters = []; w.forEach(function (f) { f(); });
         };
         rec.start(1000);

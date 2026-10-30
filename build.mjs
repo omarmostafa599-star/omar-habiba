@@ -88,7 +88,7 @@ const runtimeFor = (version) => ({
     wishThanks: T.wishThanks, sendError: T.sendError, nameRequired: T.nameRequired,
     wishRequired: T.wishRequired, sending: T.sending, voiceNoMic: T.voiceNoMic,
     videoNoCam: T.videoNoCam, videoLimit: T.videoLimit, uploading: T.uploading,
-    mediaUnsupported: T.mediaUnsupported, micDenied: T.micDenied, camDenied: T.camDenied,
+    mediaUnsupported: T.mediaUnsupported, recEmpty: T.recEmpty, micDenied: T.micDenied, camDenied: T.camDenied,
   },
 });
 
