@@ -175,7 +175,13 @@ const wishSection = () => !backendOn ? '' : `
             <span class="sr">${esc(T.wishMessage)}</span>
             <textarea name="message" id="wishMessage" rows="4" maxlength="1500" placeholder="${esc(T.wishMessage)}"></textarea>
           </label>
-          <div class="voice" id="voice" data-state="idle">
+          <div class="media">
+            <p class="media-title">${esc(T.mediaTitle)}</p>
+            <div class="media-toggles">
+              <button type="button" class="btn btn-voice media-toggle" id="tglVoice" aria-expanded="false" aria-controls="voice"><svg aria-hidden="true"><use href="#i-mic"/></svg><span>${esc(T.mediaVoice)}</span><svg class="has-clip" aria-hidden="true"><use href="#i-check"/></svg></button>
+              <button type="button" class="btn btn-voice media-toggle" id="tglVideo" aria-expanded="false" aria-controls="video"><svg aria-hidden="true"><use href="#i-cam"/></svg><span>${esc(T.mediaVideo)}</span><svg class="has-clip" aria-hidden="true"><use href="#i-check"/></svg></button>
+            </div>
+          <div class="voice" id="voice" data-state="idle" hidden>
             <p class="voice-title">${esc(T.voiceTitle)}</p>
             <div class="voice-row v-idle">
               <button type="button" class="btn btn-voice" id="recStart"><svg aria-hidden="true"><use href="#i-mic"/></svg><span>${esc(T.voiceStart)}</span></button>
@@ -194,7 +200,7 @@ const wishSection = () => !backendOn ? '' : `
             </div>
             <p class="voice-note" id="voiceNote" role="status" aria-live="polite"></p>
           </div>
-          <div class="voice video" id="video" data-state="idle">
+          <div class="voice video" id="video" data-state="idle" hidden>
             <p class="voice-title">${esc(T.videoTitle)}</p>
             <div class="voice-row v-idle">
               <button type="button" class="btn btn-voice" id="vidStart"><svg aria-hidden="true"><use href="#i-cam"/></svg><span>${esc(T.videoStart)}</span></button>
@@ -215,6 +221,7 @@ const wishSection = () => !backendOn ? '' : `
               <button type="button" class="link-btn" id="vidDel">${esc(T.voiceDelete)}</button>
             </div>
             <p class="voice-note" id="videoNote" role="status" aria-live="polite"></p>
+          </div>
           </div>
           <p class="privacy"><svg aria-hidden="true"><use href="#i-lock"/></svg><span>${esc(T.privacyNote)}</span></p>
           <button type="submit" class="btn btn-primary btn-wide" id="wishSend"><span id="wishSendLabel">${esc(T.wishSend)}</span></button>

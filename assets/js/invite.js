@@ -254,6 +254,8 @@
         Array.prototype.forEach.call(buttons, function (x) { x.setAttribute('aria-busy', 'true'); x.disabled = true; });
         post(Object.assign(base('rsvp'), { name: name, attending: yes })).then(function () {
           store('inv.rsvp', JSON.stringify({ a: yes ? 1 : 0, t: Date.now() }));
+          if (!load('inv.name')) store('inv.name', name);
+          try { document.dispatchEvent(new Event('inv:name')); } catch (e) {}
           showDone(yes ? T.rsvpThanksYes : T.rsvpThanksNo);
         }).catch(function () {
           msg.textContent = T.sendError;
@@ -296,6 +298,7 @@
       if (clip && clip.url) { try { URL.revokeObjectURL(clip.url); } catch (e) {} }
       clip = null; o.player.removeAttribute('src'); try { o.player.load(); } catch (e) {}
       o.play.setAttribute('aria-pressed', 'false');
+      if (o.onChange) o.onChange(false);
     }
     function lockOthers(on) { (o.others || []).forEach(function (r) { r.lock(on); }); }
     function start() {
@@ -322,11 +325,13 @@
           var bt = baseType(rec.mimeType || mime);
           var blob = new Blob(chunks, { type: bt.type });
           stopStream(); lockOthers(false);
+          if (o.onRecording) o.onRecording(false);
           if (blob.size > 0 && (!o.maxBytes || blob.size <= o.maxBytes)) {
             clip = { blob: blob, secs: secs, type: bt.type, ext: bt.ext, url: URL.createObjectURL(blob) };
             o.player.src = clip.url;
             o.lenEl.textContent = fmtTime(secs);
             setState('ready');
+            if (o.onChange) o.onChange(true);
             if (hitLimit && o.limitText) o.note.textContent = o.limitText;
           } else { setState('idle'); o.note.textContent = blob.size > 0 && o.limitText ? o.limitText : o.noAccess; }
           var w = waiters; waiters = []; w.forEach(function (f) { f(); });
@@ -335,6 +340,7 @@
         t0 = Date.now();
         o.timeEl.textContent = '0:00 / ' + maxLabel;
         setState('recording');
+        if (o.onRecording) o.onRecording(true);
         timer = setInterval(function () {
           var el = (Date.now() - t0) / 1000;
           o.timeEl.textContent = fmtTime(Math.min(el, o.max)) + ' / ' + maxLabel;
@@ -397,6 +403,29 @@
     // لا تسجيل صوت وفيديو في نفس الوقت
     if (videoR) { voiceOpts.others = [videoR]; videoOpts.others = [voiceR]; }
 
+    // زرّا «بصوتكم / بالفيديو»: يفتح صندوقًا واحدًا فقط
+    var tglV = $('tglVoice'), tglC = $('tglVideo');
+    var panels = [[tglV, $('voice'), voiceR], [tglC, $('video'), videoR]].filter(function (x) { return x[0] && x[1] && x[2]; });
+    function showPanel(btnEl) {
+      panels.forEach(function (p) {
+        var on = p[0] === btnEl && p[0].getAttribute('aria-expanded') !== 'true';
+        p[0].setAttribute('aria-expanded', String(on));
+        p[1].hidden = !on;
+      });
+    }
+    panels.forEach(function (p, i) {
+      p[0].addEventListener('click', function () { showPanel(p[0]); });
+      var opts = i === 0 ? voiceOpts : videoOpts;
+      opts.onChange = function (has) { p[0].setAttribute('data-has-clip', String(has)); };
+      opts.onRecording = function (rec) { panels.forEach(function (q) { q[0].disabled = rec; }); };
+    });
+    function closePanels() { panels.forEach(function (p) { p[0].setAttribute('aria-expanded', 'false'); p[1].hidden = true; p[0].setAttribute('data-has-clip', 'false'); }); }
+
+    // الاسم: يُملأ تلقائيًا من تأكيد الحضور على نفس الجهاز
+    function fillName() { var n = load('inv.name'); if (n && !nameIn.value) nameIn.value = n; }
+    fillName();
+    document.addEventListener('inv:name', fillName);
+
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -421,8 +450,10 @@
             return post(p);
           })
           .then(function () {
+            if (!load('inv.name')) store('inv.name', name);
             form.hidden = true; doneBox.hidden = false;
             nameIn.value = ''; msgIn.value = ''; voiceR.reset(); if (videoR) videoR.reset();
+            closePanels(); fillName();
           })
           .catch(function () { msg.textContent = T.sendError; })
           .then(function () { busy = false; sendBtn.disabled = false; sendBtn.removeAttribute('aria-busy'); sendLabel.textContent = labelText; });

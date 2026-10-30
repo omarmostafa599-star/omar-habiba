@@ -57,6 +57,7 @@ async function openEnvelope(page) {
   await page.waitForSelector('#rsvpDone:not([hidden])');
   const text = await page.textContent('#rsvpDoneText');
   let d = await dump();
+  ok('الاسم يُملأ تلقائيًا في المباركات بعد تأكيد الحضور', (await page.inputValue('#wishName')) === 'أحمد محمود', await page.inputValue('#wishName'));
   ok('الحضور: «سأحضر» يُحفظ بالاسم والنسخة', d.rsvps.length === 1 && d.rsvps[0].name === 'أحمد محمود' && d.rsvps[0].attending === true && d.rsvps[0].version === 'back', text);
   await page.reload({ waitUntil: 'networkidle' });
   await openEnvelope(page);
@@ -99,7 +100,7 @@ async function openEnvelope(page) {
 
   await page.click('#wishAnother');
   await page.fill('#wishName', 'ليلى');
-  await page.click('#recStart');
+  await (async () => { if (await page.isHidden('#voice')) await page.click('#tglVoice'); })(); await page.click('#recStart');
   await page.waitForSelector('#voice[data-state="recording"]', { timeout: 5000 });
   await page.waitForTimeout(2300);
   const timer = await page.textContent('#recTime');
@@ -115,7 +116,7 @@ async function openEnvelope(page) {
 
   // حذف وإعادة التسجيل
   await page.click('#wishAnother');
-  await page.click('#recStart');
+  await (async () => { if (await page.isHidden('#voice')) await page.click('#tglVoice'); })(); await page.click('#recStart');
   await page.waitForSelector('#voice[data-state="recording"]');
   await page.waitForTimeout(1200);
   await page.click('#recStop');
@@ -123,9 +124,15 @@ async function openEnvelope(page) {
   await page.click('#recDel');
   ok('التسجيل: زر الحذف يرجع للحالة الأولى', await page.getAttribute('#voice', 'data-state') === 'idle');
 
+  // صندوق واحد مفتوح في كل مرة
+  const vis = () => page.evaluate(() => [document.getElementById('voice').hidden, document.getElementById('video').hidden]);
+  await page.click('#tglVideo'); const st1 = await vis();
+  await page.click('#tglVoice'); const st2 = await vis();
+  await page.click('#tglVoice'); const st3 = await vis();
+  ok('زرّا «بصوتكم / بالفيديو» يفتحان صندوقًا واحدًا فقط', JSON.stringify([st1, st2, st3]) === '[[true,false],[false,true],[true,true]]', JSON.stringify([st1, st2, st3]));
   // فيديو
   await page.fill('#wishName', 'يوسف');
-  await page.click('#vidStart');
+  await (async () => { if (await page.isHidden('#video')) await page.click('#tglVideo'); })(); await page.click('#vidStart');
   await page.waitForSelector('#video[data-state="recording"]', { timeout: 6000 });
   const voiceLocked = await page.getAttribute('#voice', 'data-state');
   await page.waitForTimeout(2300);
@@ -153,7 +160,7 @@ async function openEnvelope(page) {
   });
   await page.goto(BASE + 'front/?test=1', { waitUntil: 'networkidle' });
   await page.evaluate(() => { document.documentElement.classList.add('show-invite', 'gate-done'); });
-  await page.click('#recStart');
+  await (async () => { if (await page.isHidden('#voice')) await page.click('#tglVoice'); })(); await page.click('#recStart');
   await page.waitForSelector('#voice[data-state="ready"]', { timeout: 8000 });
   const len = await page.textContent('#recLen');
   ok('التسجيل يتوقف تلقائيًا عند 2:00', len === '2:00', len);
@@ -167,7 +174,7 @@ async function openEnvelope(page) {
   await page.addInitScript(() => { navigator.mediaDevices.getUserMedia = () => Promise.reject(new Error('denied')); });
   await page.goto(BASE + 'front/?test=1', { waitUntil: 'networkidle' });
   await page.evaluate(() => { document.documentElement.classList.add('show-invite', 'gate-done'); });
-  await page.click('#recStart');
+  await (async () => { if (await page.isHidden('#voice')) await page.click('#tglVoice'); })(); await page.click('#recStart');
   await page.waitForFunction(() => document.getElementById('voiceNote').textContent.length > 0);
   ok('رفض الميكروفون: رسالة بديلة والمباركة المكتوبة متاحة', (await page.textContent('#voiceNote')).includes('الميكروفون'));
   await ctx.close();
