@@ -50,8 +50,8 @@
   }
   function fmtTime(sec) { sec = Math.max(0, Math.floor(sec)); return Math.floor(sec / 60) + ':' + (sec % 60 < 10 ? '0' : '') + (sec % 60); }
 
-  // ---------- الاتصال بقاعدة البيانات ----------
-  var B = cfg.backend;
+  // ---------- الاتصال بـ Google Apps Script ----------
+  var EP = cfg.endpoint;
   var IS_TEST = /(?:^|[?&])test=1(?:&|$)/.test(location.search.slice(1));
   var deviceCache = null;
   function deviceId() {
@@ -60,33 +60,40 @@
     if (!d || !/^[a-z0-9]{8,40}$/.test(d)) { d = rand(20); store('inv.device', d); }
     return (deviceCache = d);
   }
-  function headers(extra) {
-    var h = { apikey: B.key, Authorization: 'Bearer ' + B.key };
-    for (var k in extra) h[k] = extra[k];
-    return h;
-  }
-  function insert(table, row) {
-    row.version = cfg.version; row.device = deviceId(); row.is_test = IS_TEST;
-    return fetch(B.url + '/rest/v1/' + table, {
-      method: 'POST',
-      headers: headers({ 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
-      body: JSON.stringify(row)
-    }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); });
-  }
-  function upload(bucket, path, blob, type, onProgress) {
+  function base(type) { return { type: type, version: cfg.version, device: deviceId(), test: IS_TEST }; }
+  // طلب «بسيط» (text/plain) حتى لا يحتاج المتصفح لطلب تمهيدي مع Apps Script
+  function post(payload) {
     return new Promise(function (resolve, reject) {
       var x = new XMLHttpRequest();
-      x.open('POST', B.url + '/storage/v1/object/' + bucket + '/' + path);
-      var h = headers({ 'Content-Type': type, 'x-upsert': 'false', 'cache-control': '3600' });
-      for (var k in h) x.setRequestHeader(k, h[k]);
-      if (onProgress && x.upload) x.upload.onprogress = function (e) { if (e.lengthComputable) onProgress(e.loaded / e.total); };
-      x.onload = function () { x.status >= 200 && x.status < 300 ? resolve() : reject(new Error('HTTP ' + x.status)); };
+      x.open('POST', EP);
+      x.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+      x.timeout = 180000;
+      // ملاحظة: لا نسجّل مستمعًا على x.upload لأنه يحوّل الطلب إلى طلب يحتاج تمهيدًا (CORS) لا يدعمه Apps Script
+      x.onload = function () {
+        var j = null; try { j = JSON.parse(x.responseText); } catch (e) {}
+        if (x.status >= 200 && x.status < 300 && j && j.ok) resolve(j); else reject(new Error((j && j.error) || ('HTTP ' + x.status)));
+      };
       x.onerror = function () { reject(new Error('network')); };
-      x.send(blob);
+      x.ontimeout = function () { reject(new Error('timeout')); };
+      x.send(JSON.stringify(payload));
+    });
+  }
+  function toB64(blob) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result).split(',')[1] || ''); };
+      r.onerror = function () { reject(r.error); };
+      r.readAsDataURL(blob);
     });
   }
   var openCounted = false;
-  function track(kind) { if (B) insert('invite_events', { kind: kind }).catch(noop); }
+  function track(kind) {
+    if (!EP) return;
+    var p = base('event'); p.kind = kind;
+    var body = JSON.stringify(p);
+    try { if (navigator.sendBeacon && navigator.sendBeacon(EP, new Blob([body], { type: 'text/plain;charset=utf-8' }))) return; } catch (e) {}
+    try { fetch(EP, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body }).catch(noop); } catch (e) {}
+  }
 
   // ---------- فتح الظرف (~5.6 ثانية) ----------
   function open() {
@@ -224,7 +231,7 @@
 
   // ---------- تأكيد الحضور ----------
   function setupRsvp() {
-    var sec = $('rsvp'); if (!sec || !B) return;
+    var sec = $('rsvp'); if (!sec || !EP) return;
     var form = $('rsvpForm'), nameIn = $('rsvpName'), msg = $('rsvpMsg');
     var doneBox = $('rsvpDone'), doneText = $('rsvpDoneText'), another = $('rsvpAnother');
     var buttons = form.querySelectorAll('[data-attending]');
@@ -245,7 +252,7 @@
         var yes = b.getAttribute('data-attending') === 'yes';
         busy = true; msg.textContent = '';
         Array.prototype.forEach.call(buttons, function (x) { x.setAttribute('aria-busy', 'true'); x.disabled = true; });
-        insert('invite_rsvps', { name: name, attending: yes }).then(function () {
+        post(Object.assign(base('rsvp'), { name: name, attending: yes })).then(function () {
           store('inv.rsvp', JSON.stringify({ a: yes ? 1 : 0, t: Date.now() }));
           showDone(yes ? T.rsvpThanksYes : T.rsvpThanksNo);
         }).catch(function () {
@@ -364,7 +371,7 @@
 
   // ---------- المباركات: نص + صوت + فيديو ----------
   function setupWish() {
-    var sec = $('wish'); if (!sec || !B) return;
+    var sec = $('wish'); if (!sec || !EP) return;
     var form = $('wishForm'), nameIn = $('wishName'), msgIn = $('wishMessage'), msg = $('wishMsg');
     var sendBtn = $('wishSend'), sendLabel = $('wishSendLabel'), labelText = sendLabel.textContent;
     var doneBox = $('wishDone'), another = $('wishAnother');
@@ -390,7 +397,6 @@
     // لا تسجيل صوت وفيديو في نفس الوقت
     if (videoR) { voiceOpts.others = [videoR]; videoOpts.others = [voiceR]; }
 
-    function progressLabel(p) { sendLabel.textContent = T.uploading + ' ' + Math.round(p * 100) + '%'; }
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -405,18 +411,14 @@
         if (!text && !a && !v) { msg.textContent = T.wishRequired; msgIn.focus(); return; }
         busy = true; msg.textContent = '';
         sendBtn.disabled = true; sendBtn.setAttribute('aria-busy', 'true'); sendLabel.textContent = T.sending;
-        var aPath = a ? cfg.version + '/' + uuid() + '.' + a.ext : null;
-        var vPath = v ? cfg.version + '/' + uuid() + '.' + v.ext : null;
-        var total = (a ? a.blob.size : 0) + (v ? v.blob.size : 0), doneBytes = 0;
-        Promise.resolve()
-          .then(function () { return a ? upload('invite-voices', aPath, a.blob, a.type, function (p) { progressLabel((p * a.blob.size) / total); }).then(function () { doneBytes += a.blob.size; }) : null; })
-          .then(function () { return v ? upload('invite-videos', vPath, v.blob, v.type, function (p) { progressLabel((doneBytes + p * v.blob.size) / total); }) : null; })
-          .then(function () {
-            return insert('invite_wishes', {
-              name: name, message: text || null,
-              audio_path: aPath, audio_seconds: a ? a.secs : null, audio_bytes: a ? a.blob.size : null,
-              video_path: vPath, video_seconds: v ? v.secs : null, video_bytes: v ? v.blob.size : null
-            });
+        Promise.all([a ? toB64(a.blob) : null, v ? toB64(v.blob) : null])
+          .then(function (b) {
+            var p = base('wish');
+            p.name = name; p.message = text || '';
+            p.audio = a ? { b64: b[0], type: a.type, secs: a.secs } : null;
+            p.video = v ? { b64: b[1], type: v.type, secs: v.secs } : null;
+            if (a || v) sendLabel.textContent = T.uploading + '…';
+            return post(p);
           })
           .then(function () {
             form.hidden = true; doneBox.hidden = false;

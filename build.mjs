@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// يبني نسختي الدعوة (front / back) وصفحة الإدارة وملف التقويم من invite.config.json
+// يبني نسختي الدعوة (front / back) وملف التقويم من invite.config.json
 // الاستخدام:  node build.mjs            → المخرجات في المجلد _site/
 // اختياري:    SITE_URL=https://.../ node build.mjs        (يتجاوز siteUrl)
-//             SUPABASE_URL=... SUPABASE_KEY=... node build.mjs   (يتجاوز إعدادات Supabase — للاختبار المحلي)
+//             INVITE_ENDPOINT=http://... node build.mjs        (يتجاوز رابط Apps Script — للاختبار المحلي)
 
 import { readFileSync, writeFileSync, mkdirSync, cpSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -18,12 +18,9 @@ let siteUrl = (process.env.SITE_URL || cfg.siteUrl || '').trim();
 if (siteUrl && !siteUrl.endsWith('/')) siteUrl += '/';
 if (!/^https:\/\//.test(siteUrl)) console.warn('⚠ siteUrl غير مضبوط برابط https كامل — صورة المعاينة في واتساب لن تعمل.');
 
-const backend = {
-  url: (process.env.SUPABASE_URL ?? cfg.backend.supabaseUrl ?? '').trim().replace(/\/+$/, ''),
-  key: (process.env.SUPABASE_KEY ?? cfg.backend.supabaseKey ?? '').trim(),
-};
-const backendOn = Boolean(backend.url && backend.key);
-if (!backendOn) console.warn('⚠ إعدادات Supabase فارغة — أقسام تأكيد الحضور والمباركات والعداد لن تعمل حتى تُضبط.');
+const endpoint = (process.env.INVITE_ENDPOINT ?? cfg.backend.endpoint ?? '').trim();
+const backendOn = /^https?:\/\//.test(endpoint);
+if (!backendOn) console.warn('⚠ backend.endpoint فارغ — أقسام تأكيد الحضور والمباركات والعداد لن تظهر حتى يُضبط رابط Apps Script.');
 
 // ---------- التوقيت ----------
 const start = new Date(cfg.event.startLocal);
@@ -80,7 +77,7 @@ const gcal = 'https://calendar.google.com/calendar/render?' + new URLSearchParam
 // ---------- الإعدادات المضمّنة في الصفحة ----------
 const runtimeFor = (version) => ({
   version, startUTC,
-  backend: backendOn ? { url: backend.url, key: backend.key } : null,
+  endpoint: backendOn ? endpoint : null,
   voiceMax: cfg.backend.voiceMaxSeconds || 120,
   videoMax: cfg.backend.videoMaxSeconds || 60,
   videoMaxBytes: Math.round((cfg.backend.videoMaxMB || 18) * 1024 * 1024),
@@ -94,10 +91,7 @@ const runtimeFor = (version) => ({
   },
 });
 
-const V = {
-  css: hash('assets/css/invite.css'), js: hash('assets/js/invite.js'),
-  acss: hash('assets/css/admin.css'), ajs: hash('assets/js/admin.js'),
-};
+const V = { css: hash('assets/css/invite.css'), js: hash('assets/js/invite.js') };
 
 const SPRITE = `
 <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
@@ -279,7 +273,7 @@ ${ogImg.startsWith('https://') ? `<meta property="og:image:secure_url" content="
 <link rel="preload" href="../assets/fonts/noto-naskh-arabic-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../assets/img/doors.jpg" as="image">
 <link rel="preload" href="../assets/img/seal.png" as="image">
-${backendOn ? `<link rel="preconnect" href="${esc(backend.url)}" crossorigin>` : ''}
+${backendOn ? '<link rel="preconnect" href="https://script.google.com">\n<link rel="preconnect" href="https://script.googleusercontent.com">' : ''}
 <link rel="stylesheet" href="../assets/css/invite.css?v=${V.css}">
 <script id="invite-config" type="application/json">${jsonScript(runtimeFor(version))}</script>
 <script src="../assets/js/invite.js?v=${V.js}" defer></script>
@@ -381,121 +375,6 @@ ${wishSection()}
 `;
 }
 
-function adminPage() {
-  const adminCfg = {
-    backend: backendOn ? { url: backend.url, key: backend.key } : null,
-    adminEmail: cfg.backend.adminEmail,
-    redirect: siteUrl ? `${siteUrl}admin/` : null,
-    versions: Object.fromEntries(Object.entries(cfg.versions).map(([k, v]) => [k, v.label])),
-    bucket: 'invite-voices',
-    videoBucket: 'invite-videos',
-    title: `${cfg.couple.groom} و${cfg.couple.bride}`,
-  };
-  return `<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>لوحة الدعوة — ${esc(adminCfg.title)}</title>
-<meta name="robots" content="noindex, nofollow">
-<meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#F8F0E5">
-<link rel="icon" href="../assets/img/favicon.png" type="image/png">
-<link rel="stylesheet" href="../assets/css/admin.css?v=${V.acss}">
-<script id="admin-config" type="application/json">${jsonScript(adminCfg)}</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
-<script src="../assets/js/admin.js?v=${V.ajs}" defer></script>
-</head>
-<body>
-<div class="wrap">
-  <header class="top">
-    <div>
-      <p class="kicker">لوحة الدعوة</p>
-      <h1>${esc(adminCfg.title)}</h1>
-    </div>
-    <div class="top-actions" id="topActions" hidden>
-      <span class="who" id="who"></span>
-      <button type="button" class="btn btn-ghost" id="refreshBtn">تحديث</button>
-      <button type="button" class="btn btn-ghost" id="logoutBtn">خروج</button>
-    </div>
-  </header>
-
-  <section class="panel" id="loginPanel" hidden>
-    <h2>تسجيل الدخول</h2>
-    <p class="muted">يصلك رابط دخول على بريدك. افتحه من نفس الجهاز أو من أي جهاز.</p>
-    <form id="loginForm" class="login">
-      <label class="field"><span>البريد الإلكتروني</span>
-        <input type="email" id="loginEmail" dir="ltr" autocomplete="email" required value="${esc(cfg.backend.adminEmail)}"></label>
-      <button type="submit" class="btn btn-primary" id="loginBtn">أرسل رابط الدخول</button>
-      <p class="msg" id="loginMsg" role="status" aria-live="polite"></p>
-    </form>
-  </section>
-
-  <section class="panel" id="notConfigured" hidden>
-    <h2>قاعدة البيانات غير مضبوطة بعد</h2>
-    <p class="muted">أضف supabaseUrl و supabaseKey في invite.config.json ثم أعد النشر.</p>
-  </section>
-
-  <div id="dash" hidden>
-    <div class="filters">
-      <div class="seg" role="radiogroup" aria-label="نوع البيانات">
-        <label><input type="radio" name="dataset" value="real" checked><span>البيانات الحقيقية</span></label>
-        <label><input type="radio" name="dataset" value="test"><span>بيانات التجربة</span></label>
-      </div>
-      <p class="muted small" id="updatedAt"></p>
-    </div>
-
-    <section class="panel">
-      <h2>الأرقام</h2>
-      <div class="table-wrap"><table class="stats" id="statsTable"></table></div>
-      <p class="muted small" id="usage"></p>
-      <p class="muted small">الزيارات تُحسب عند فتح الرابط، وفتح الظرف عند الضغط على الختم. «أجهزة مختلفة» تقدير لعدد الأشخاص؛ نفس الشخص من جهازين يُحسب مرتين.</p>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>تأكيد الحضور</h2>
-        <div class="tabs" role="tablist" id="rsvpTabs">
-          <button type="button" role="tab" data-f="all" aria-selected="true">الكل</button>
-          <button type="button" role="tab" data-f="yes" aria-selected="false">سيحضرون</button>
-          <button type="button" role="tab" data-f="no" aria-selected="false">اعتذروا</button>
-        </div>
-      </div>
-      <div class="table-wrap"><table class="list" id="rsvpTable"></table></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>المباركات</h2>
-        <div class="tabs" role="tablist" id="wishTabs">
-          <button type="button" role="tab" data-f="all" aria-selected="true">الكل</button>
-          <button type="button" role="tab" data-f="voice" aria-selected="false">بالصوت</button>
-          <button type="button" role="tab" data-f="video" aria-selected="false">بالفيديو</button>
-          <button type="button" role="tab" data-f="text" aria-selected="false">مكتوبة فقط</button>
-        </div>
-      </div>
-      <div class="wishes" id="wishList"></div>
-    </section>
-
-    <section class="panel">
-      <h2>الذكرى</h2>
-      <p class="muted">نزّل كل البيانات في ملف Excel، وكل التسجيلات الصوتية والفيديوهات في ملف مضغوط. نزّلها خلال أسبوع من الفرح.</p>
-      <div class="row">
-        <button type="button" class="btn btn-primary" id="xlsxBtn">تنزيل Excel</button>
-        <button type="button" class="btn btn-ghost" id="zipBtn">تنزيل التسجيلات والفيديوهات (ZIP)</button>
-      </div>
-      <p class="msg" id="exportMsg" role="status" aria-live="polite"></p>
-    </section>
-  </div>
-  <p class="msg err" id="fatal" role="alert" hidden></p>
-</div>
-</body>
-</html>
-`;
-}
-
 // ---------- الإخراج ----------
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
@@ -506,8 +385,6 @@ for (const ver of Object.keys(cfg.versions)) {
   mkdirSync(join(OUT, ver), { recursive: true });
   writeFileSync(join(OUT, ver, 'index.html'), page(ver));
 }
-mkdirSync(join(OUT, 'admin'), { recursive: true });
-writeFileSync(join(OUT, 'admin', 'index.html'), adminPage());
 writeFileSync(join(OUT, 'index.html'), `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta http-equiv="refresh" content="0; url=./front/"><link rel="canonical" href="./front/"><title>${esc(cfg.share.title)}</title></head><body><a href="./front/">${esc(cfg.share.title)}</a></body></html>\n`);
 writeFileSync(join(OUT, '.nojekyll'), '');
-console.log(`✓ تم البناء في ${OUT}  (siteUrl: ${siteUrl || '—'} · Supabase: ${backendOn ? 'مفعّل' : 'غير مضبوط'})`);
+console.log(`✓ تم البناء في ${OUT}  (siteUrl: ${siteUrl || '—'} · الردود: ${backendOn ? 'مفعّلة' : 'غير مضبوطة'})`);

@@ -1,12 +1,10 @@
 {
   "siteUrl": "https://omarmostafa599-star.github.io/omar-habiba/",
   "backend": {
-    "supabaseUrl": "",
-    "supabaseKey": "",
-    "adminEmail": "omar.mostafa599@gmail.com",
+    "endpoint": "",
     "voiceMaxSeconds": 120,
     "videoMaxSeconds": 60,
-    "videoMaxMB": 18
+    "videoMaxMB": 12
   },
   "couple": {
     "groom": "عمر",
