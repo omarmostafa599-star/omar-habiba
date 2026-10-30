@@ -183,7 +183,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .door-r { right: 0; transform-origin: 100% 50%; }
 .door-l { left: 0;  transform-origin: 0 50%; }
 /* تداخل بسيط في المنتصف حتى لا يظهر أي فراغ بين الضلفتين وهما مقفولتين */
-.door { width: calc(50% + 2px); }
+.door { width: calc(50% + 2px); top: -1px; bottom: -1px; }
 .door-face {
   position: absolute; inset: 0;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
