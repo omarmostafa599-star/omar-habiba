@@ -1,0 +1,18 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Omar and Habiba//Wedding Invitation//AR
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:wedding-20261111T100000Z@invitation
+DTSTAMP:20261030T220200Z
+DTSTART:20261111T100000Z
+SUMMARY:عقد قران عمر وحبيبة
+LOCATION:مسجد النور المكي، دمنهور، مصر
+DESCRIPTION:ويُعقد القران بإذن الله بعد صلاة ا
+ لظهر\nحضوركم يسعدنا، ودعواتكم تتمّم فرحت
+ نا\nموقع المسجد: https://maps.app.goo.gl/fnK5L8Yv1MMb4ncd7?g_s
+ t=ic
+URL:https://maps.app.goo.gl/fnK5L8Yv1MMb4ncd7?g_st=ic
+END:VEVENT
+END:VCALENDAR
