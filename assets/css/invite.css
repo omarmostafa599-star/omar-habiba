@@ -27,10 +27,10 @@
 :root {
   --paper: #F8F0E5;
   --paper-hi: #FCF8F1;
-  --ink: #4A4538;            /* زيتي البدلة الغامق للنصوص */
-  --ink-soft: #6D6654;       /* زيتي البدلة نفسه للنصوص الثانوية */
-  --olive: #6D6654;
-  --olive-tint: rgba(109, 102, 84, .12);
+  --ink: #474A2C;            /* زيتي غامق للنصوص */
+  --ink-soft: #6B6F45;       /* زيتي مصفر للنصوص الثانوية */
+  --olive: #6B6F45;
+  --olive-tint: rgba(107, 111, 69, .12);
   --gold: #BD945C;
   --gold-deep: #9A7745;
   --gold-light: #E7D3A6;
@@ -182,6 +182,8 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .door-r { right: 0; transform-origin: 100% 50%; }
 .door-l { left: 0;  transform-origin: 0 50%; }
+/* تداخل بسيط في المنتصف حتى لا يظهر أي فراغ بين الضلفتين وهما مقفولتين */
+.door { width: calc(50% + 2px); }
 .door-face {
   position: absolute; inset: 0;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
@@ -408,7 +410,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .btn-wide { width: 100%; }
 .btn[disabled], .btn[aria-busy="true"] { opacity: .55; cursor: default; }
 @media (hover: hover) and (pointer: fine) {
-  .btn-primary:hover { background: #5D5846; }
+  .btn-primary:hover { background: #5A5E39; }
   .btn-ghost:hover, .btn-voice:hover, .btn-small:hover { border-color: var(--olive); }
 }
 .link-btn {

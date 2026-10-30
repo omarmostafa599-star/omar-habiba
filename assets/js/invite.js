@@ -279,7 +279,7 @@
     var maxLabel = fmtTime(o.max);
     var supported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
     function setState(st) { o.box.setAttribute('data-state', st); }
-    if (!supported) { setState('unsupported'); o.note.textContent = o.noAccess; }
+    if (!supported) { setState('unsupported'); o.note.textContent = T.mediaUnsupported || o.noAccess; }
     function pickMime() {
       if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
       for (var i = 0; i < o.mimes.length; i++) if (MediaRecorder.isTypeSupported(o.mimes[i])) return o.mimes[i];
@@ -349,7 +349,13 @@
           if (el >= o.max) stop();
         }, 250);
         try { o.stop.focus({ preventScroll: true }); } catch (e) {}
-      }).catch(function () { stopStream(); setState('idle'); lockOthers(false); o.note.textContent = o.noAccess; });
+      }).catch(function (err) {
+        stopStream(); setState('idle'); lockOthers(false);
+        var n = err && err.name || '';
+        if (n === 'NotAllowedError' || n === 'SecurityError' || n === 'PermissionDeniedError') o.note.textContent = o.denied || o.noAccess;
+        else if (n === 'NotSupportedError' || n === 'TypeError') o.note.textContent = (T.mediaUnsupported || o.noAccess) + ' (' + n + ')';
+        else o.note.textContent = o.noAccess + (n ? ' (' + n + ')' : '');
+      });
     }
     function stop() {
       return new Promise(function (resolve) {
@@ -373,7 +379,7 @@
       recording: function () { return !!(rec && rec.state !== 'inactive'); },
       stop: stop,
       lock: function (on) { if (o.box.getAttribute('data-state') === 'idle' || o.box.getAttribute('data-state') === 'busy') setState(on ? 'busy' : 'idle'); },
-      reset: function () { o.player.pause(); clear(); o.note.textContent = supported ? '' : o.noAccess; if (supported) setState('idle'); }
+      reset: function () { o.player.pause(); clear(); o.note.textContent = supported ? '' : (T.mediaUnsupported || o.noAccess); if (supported) setState('idle'); }
     };
   }
 
@@ -388,14 +394,14 @@
     var voiceOpts = {
       kind: 'audio', box: $('voice'), note: $('voiceNote'), timeEl: $('recTime'), lenEl: $('recLen'),
       start: $('recStart'), stop: $('recStop'), play: $('recPlay'), redo: $('recRedo'), del: $('recDel'), player: $('recAudio'),
-      max: cfg.voiceMax || 120, noAccess: T.voiceNoMic,
+      max: cfg.voiceMax || 120, noAccess: T.voiceNoMic, denied: T.micDenied,
       constraints: { audio: { echoCancellation: true, noiseSuppression: true } },
       mimes: ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']
     };
     var videoOpts = $('video') ? {
       kind: 'video', box: $('video'), note: $('videoNote'), timeEl: $('vidTime'), lenEl: $('vidLen'),
       start: $('vidStart'), stop: $('vidStop'), play: $('vidPlayBtn'), redo: $('vidRedo'), del: $('vidDel'), player: $('vidPlay'), live: $('vidLive'),
-      max: cfg.videoMax || 60, maxBytes: cfg.videoMaxBytes, noAccess: T.videoNoCam, limitText: T.videoLimit,
+      max: cfg.videoMax || 60, maxBytes: cfg.videoMaxBytes, noAccess: T.videoNoCam, denied: T.camDenied, limitText: T.videoLimit,
       constraints: { audio: { echoCancellation: true, noiseSuppression: true }, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } } },
       mimes: ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm'],
       others: []
