@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 
 const BASE = process.argv[2] || 'http://localhost:8765/';
 const MAP = 'https://maps.app.goo.gl/fnK5L8Yv1MMb4ncd7?g_st=ic';
-const TARGET = Date.parse('2026-11-11T11:00:00Z');
+const TARGET = Date.parse('2026-11-11T10:00:00Z');
 const results = [];
 const ok = (name, pass, info = '') => { results.push({ name, pass, info }); console.log(`${pass ? '✓' : '✗'} ${name}${info ? '  — ' + info : ''}`); };
 
@@ -41,7 +41,7 @@ for (const ver of ['front', 'back']) {
 
     // OG
     const og = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('meta[property^="og:"],meta[name="robots"]')].map(m => [m.getAttribute('property') || m.name, m.content])));
-    ok(`[${ver}] Open Graph + noindex`, og['og:title'] === 'دعوة فرح · 11 / 11 — عمر وحبيبة' && og['og:description'] === 'حضوركم يسعدنا، ودعواتكم تتمّم فرحتنا' && og['og:image'].includes(`og-${ver}.jpg`) && /noindex/.test(og.robots), og['og:image']);
+    ok(`[${ver}] Open Graph + noindex`, og['og:title'] === 'دعوة عقد قران · 11 / 11 — عمر وحبيبة' && og['og:description'] === 'حضوركم يسعدنا، ودعواتكم تتمّم فرحتنا' && og['og:image'].includes(`og-${ver}.jpg`) && /noindex/.test(og.robots), og['og:image']);
 
     // المحتوى المخفي غير قابل للوصول قبل الفتح
     const hiddenFocusable = await page.evaluate(() => {
@@ -132,10 +132,10 @@ for (const ver of ['front', 'back']) {
 
 // 4) العد التنازلي: لحظة واحدة لكل المناطق الزمنية + عند الموعد وبعده
 for (const [label, tz, now] of [
-  ['قبل الموعد (القاهرة)', 'Africa/Cairo', '2026-11-10T10:59:50Z'],
-  ['قبل الموعد (الرياض)', 'Asia/Riyadh', '2026-11-10T10:59:50Z'],
-  ['قبل الموعد (نيويورك)', 'America/New_York', '2026-11-10T10:59:50Z'],
-  ['قبل الموعد بثوانٍ', 'Asia/Riyadh', '2026-11-11T10:59:57Z'],
+  ['قبل الموعد (القاهرة)', 'Africa/Cairo', '2026-11-10T09:59:50Z'],
+  ['قبل الموعد (الرياض)', 'Asia/Riyadh', '2026-11-10T09:59:50Z'],
+  ['قبل الموعد (نيويورك)', 'America/New_York', '2026-11-10T09:59:50Z'],
+  ['قبل الموعد بثوانٍ', 'Asia/Riyadh', '2026-11-11T09:59:57Z'],
   ['بعد الموعد', 'Asia/Riyadh', '2026-11-12T08:00:00Z'],
 ]) {
   const { ctx, page } = await newPage({ timezoneId: tz });
@@ -196,11 +196,11 @@ for (const [w, h] of [[320, 460], [320, 568], [375, 553], [375, 667], [390, 664]
   const r = await page.request.get(BASE + 'assets/calendar/wedding.ics');
   const body = await r.text();
   const unfolded = body.replace(/\r\n /g, '');
-  ok('ملف ICS: الموعد والمكان والرابط ولا وقت انتهاء', r.ok() && /DTSTART:20261111T110000Z/.test(body) && !/DTEND|DURATION/.test(body) && unfolded.includes('مسجد النور المكي') && unfolded.includes(MAP) && body.includes('\r\n'), r.headers()['content-type']);
+  ok('ملف ICS: الموعد والمكان والرابط ولا وقت انتهاء', r.ok() && /DTSTART:20261111T100000Z/.test(body) && !/DTEND|DURATION/.test(body) && unfolded.includes('مسجد النور المكي') && unfolded.includes(MAP) && body.includes('\r\n'), r.headers()['content-type']);
   await page.goto(BASE + 'front/');
   const g = await page.evaluate(() => [...document.querySelectorAll('.cal-opt')].map(a => a.href));
   const gu = new URL(g[1]);
-  ok('رابط Google Calendar: نفس اللحظة والمكان', gu.searchParams.get('dates') === '20261111T110000Z/20261111T110000Z' && gu.searchParams.get('location').includes('دمنهور') && gu.searchParams.get('details').includes(MAP), gu.searchParams.get('dates'));
+  ok('رابط Google Calendar: نفس اللحظة والمكان', gu.searchParams.get('dates') === '20261111T100000Z/20261111T100000Z' && gu.searchParams.get('location').includes('دمنهور') && gu.searchParams.get('details').includes(MAP), gu.searchParams.get('dates'));
   await ctx.close();
 }
 
