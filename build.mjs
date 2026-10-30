@@ -61,7 +61,7 @@ function icsFold(line) {
   out.push(cur); return out.join('\r\n ');
 }
 const dtstamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
-const icsDesc = `${cfg.event.ceremonyLine}\n${cfg.share.description}\nموقع الفرح: ${cfg.venue.mapUrl}`;
+const icsDesc = `${cfg.event.ceremonyLine}\n${cfg.share.description}\nموقع المسجد: ${cfg.venue.mapUrl}`;
 const ics = [
   'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Omar and Habiba//Wedding Invitation//AR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
   'BEGIN:VEVENT',
@@ -353,7 +353,7 @@ ${SPRITE}
         <figure class="mosque">
           <picture>
             <source type="image/webp" srcset="../assets/img/mosque.webp">
-            <img src="../assets/img/mosque.jpg" width="1200" height="800" alt="${esc(cfg.venue.imageAlt)}" loading="lazy" decoding="async">
+            <img src="../assets/img/mosque.jpg" width="1200" height="897" alt="${esc(cfg.venue.imageAlt)}" loading="lazy" decoding="async">
           </picture>
         </figure>
         <a class="medal" href="${esc(cfg.venue.mapUrl)}" target="_blank" rel="noopener">
