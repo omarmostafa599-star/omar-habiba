@@ -53,6 +53,8 @@
   // ---------- الاتصال بـ Google Apps Script ----------
   var EP = cfg.endpoint;
   var IS_TEST = /(?:^|[?&])test=1(?:&|$)/.test(location.search.slice(1));
+  // بيانات التجربة تُحفظ على الجهاز بمفاتيح منفصلة حتى لا تؤثر على الاستخدام الحقيقي
+  var K_RSVP = IS_TEST ? 'inv.test.rsvp' : 'inv.rsvp', K_NAME = IS_TEST ? 'inv.test.name' : 'inv.name';
   var deviceCache = null;
   function deviceId() {
     if (deviceCache) return deviceCache;
@@ -240,7 +242,7 @@
     function showDone(text) { form.hidden = true; doneBox.hidden = false; doneText.textContent = text; }
     function showForm() { doneBox.hidden = true; form.hidden = false; nameIn.value = ''; msg.textContent = ''; nameIn.focus(); }
 
-    if (load('inv.rsvp')) showDone(T.rsvpAlready);
+    if (load(K_RSVP)) showDone(T.rsvpAlready);
 
     Array.prototype.forEach.call(buttons, function (b) {
       b.addEventListener('click', function () {
@@ -253,8 +255,8 @@
         busy = true; msg.textContent = '';
         Array.prototype.forEach.call(buttons, function (x) { x.setAttribute('aria-busy', 'true'); x.disabled = true; });
         post(Object.assign(base('rsvp'), { name: name, attending: yes })).then(function () {
-          store('inv.rsvp', JSON.stringify({ a: yes ? 1 : 0, t: Date.now() }));
-          if (!load('inv.name')) store('inv.name', name);
+          store(K_RSVP, JSON.stringify({ a: yes ? 1 : 0, t: Date.now() }));
+          if (!load(K_NAME)) store(K_NAME, name);
           try { document.dispatchEvent(new Event('inv:name')); } catch (e) {}
           showDone(yes ? T.rsvpThanksYes : T.rsvpThanksNo);
         }).catch(function () {
@@ -422,7 +424,7 @@
     function closePanels() { panels.forEach(function (p) { p[0].setAttribute('aria-expanded', 'false'); p[1].hidden = true; p[0].setAttribute('data-has-clip', 'false'); }); }
 
     // الاسم: يُملأ تلقائيًا من تأكيد الحضور على نفس الجهاز
-    function fillName() { var n = load('inv.name'); if (n && !nameIn.value) nameIn.value = n; }
+    function fillName() { var n = load(K_NAME); if (n && !nameIn.value) nameIn.value = n; }
     fillName();
     document.addEventListener('inv:name', fillName);
 
@@ -450,7 +452,7 @@
             return post(p);
           })
           .then(function () {
-            if (!load('inv.name')) store('inv.name', name);
+            if (!load(K_NAME)) store(K_NAME, name);
             form.hidden = true; doneBox.hidden = false;
             nameIn.value = ''; msgIn.value = ''; voiceR.reset(); if (videoR) videoR.reset();
             closePanels(); fillName();
