@@ -12,6 +12,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const OUT = join(ROOT, '_site');
 const cfg = JSON.parse(readFileSync(join(ROOT, 'invite.config.json'), 'utf8'));
+// phase = "after": بعد العقد تبقى المباركات فقط (بدون تأكيد الحضور والعداد والموقع والتقويم)
+const AFTER = cfg.phase === 'after';
+if (AFTER && cfg.after) {
+  Object.assign(cfg.texts, cfg.after.texts || {});
+  Object.assign(cfg.share, cfg.after.share || {});
+}
 const T = cfg.texts;
 
 let siteUrl = (process.env.SITE_URL || cfg.siteUrl || '').trim();
@@ -308,7 +314,7 @@ ${SPRITE}
   </div>
 </div>
 
-<main class="invite" id="invite" tabindex="-1" aria-label="${esc(`دعوة زفاف ${cfg.couple.groom} و${cfg.couple.bride}`)}">
+<main class="invite" id="invite" tabindex="-1" aria-label="${esc(`${AFTER ? 'عقد قران' : 'دعوة زفاف'} ${cfg.couple.groom} و${cfg.couple.bride}`)}">
   <div class="layout">
     <figure class="hero">
       <picture>
@@ -330,7 +336,9 @@ ${SPRITE}
       <section class="sec sec-date reveal" aria-label="الموعد">
         <p class="day">${esc(cfg.event.dayName)}</p>
         <p class="dm"><span dir="ltr" class="ltr">${esc(cfg.event.dayMonth)}</span></p>
-        <p class="yr"><span dir="ltr" class="ltr">${esc(cfg.event.year)}</span></p>
+        <p class="yr"><span dir="ltr" class="ltr">${esc(cfg.event.year)}</span></p>${AFTER ? `
+      </section>
+` : `
         <p class="time">${esc(cfg.event.timeLabel)}</p>
         <p class="tz">${esc(cfg.event.timeZoneLabel)}</p>
         <p class="ceremony">${esc(cfg.event.ceremonyLine)}</p>
@@ -368,7 +376,7 @@ ${SPRITE}
           <svg class="sprig sprig-l" aria-hidden="true"><use href="#i-sprig"/></svg>
         </a>
       </section>
-${rsvpSection()}
+${rsvpSection()}`}
 ${wishSection()}
       <section class="sec sec-close reveal">
         <p class="closing">${esc(T.closing)}</p>

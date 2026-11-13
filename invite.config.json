@@ -1,5 +1,19 @@
 {
   "siteUrl": "https://omarmostafa599-star.github.io/omar-habiba/",
+  "phase": "after",
+  "after": {
+    "texts": {
+      "gateTitle": "عقد قران",
+      "gateHint": "اضغط على الختم لفتح الظرف",
+      "introBody": "تم عقد القران بحمد الله، ويسعدنا أن تشاركونا الفرحة بمباركتكم",
+      "closing": "دعواتكم تتمّم فرحتنا",
+      "replay": "إعادة فتح الظرف"
+    },
+    "share": {
+      "title": "عقد قران عمر وحبيبة · 11 / 11",
+      "description": "شاركونا الفرحة بمباركتكم"
+    }
+  },
   "backend": {
     "endpoint": "https://script.google.com/macros/s/AKfycbw6GUNqaHavDqoWGvOmAOWHUF2RmimxX9dyR_7RuGnIL_A34MukpZD5AmjN1ht7SNovVQ/exec",
     "voiceMaxSeconds": 120,

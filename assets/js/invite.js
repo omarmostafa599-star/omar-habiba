@@ -219,6 +219,7 @@
   }
   function tick() {
     clearTimeout(tickTimer);
+    if (!countTitle || !units[0].el) return;   // نسخة ما بعد العقد: لا يوجد عداد
     var diff = Math.max(0, target - Date.now());
     var s = Math.floor(diff / 1000);
     var d = Math.floor(s / 86400); s -= d * 86400;
